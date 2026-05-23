@@ -759,10 +759,10 @@
         </div>
 
         <div class="drop-zone" id="drop-zone">
-          <input type="file" id="file-input" accept="image/*" />
+          <input type="file" id="file-input" accept="*/*" />
           <span class="drop-icon">📄</span>
           <h3>Drop invoice here</h3>
-          <p>or click to browse<br>JPG · PNG · WebP supported</p>
+          <p>or click to browse<br>Images · PDF · Any file type</p>
         </div>
 
         <div id="preview-container">
@@ -882,7 +882,7 @@
   // ── Config ──────────────────────────────────────────────
   const API_BASE = window.location.hostname === 'localhost'
     ? 'http://localhost:5000'
-    : 'https://ai-invoice-reader-accounting-export.onrender.com';  // Same origin on Render
+    : '';  // Same origin on Render
 
   // ── State ────────────────────────────────────────────────
   let currentFile = null;
