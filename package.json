@@ -1,0 +1,14 @@
+{
+  "name": "ai-invoice-reader",
+  "version": "1.0.0",
+  "description": "AI Invoice Reader + Accounting Export Tool",
+  "scripts": {
+    "dev:backend": "cd backend && python app.py",
+    "dev:frontend": "cd frontend && npx serve -l 3000 .",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "serve": "^14.2.3"
+  }
+}
