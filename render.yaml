@@ -5,10 +5,10 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    startCommand: gunicorn app:app -c gunicorn.conf.py
     envVars:
       - key: GROQ_API_KEY
-        sync: false  # Set this manually in Render dashboard
+        sync: false        # ← You set this manually in Render dashboard
       - key: PYTHON_VERSION
         value: 3.11.0
     healthCheckPath: /health
@@ -19,12 +19,5 @@ services:
     name: invoice-ai-frontend
     runtime: static
     rootDir: frontend
-    buildCommand: echo "Static site - no build needed"
     staticPublishPath: .
-    envVars:
-      - key: API_URL
-        fromService:
-          type: web
-          name: invoice-ai-backend
-          property: host
     plan: free
