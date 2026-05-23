@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvoiceAI — Smart Invoice Reader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: #2a2a3a;
+      --accent: #6ee7b7;
+      --accent2: #818cf8;
+      --accent3: #f472b6;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --danger: #f87171;
+      --success: #4ade80;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(110,231,183,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(110,231,183,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Glow orbs */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(110,231,183,0.06) 0%, transparent 70%);
+      top: -200px; left: -200px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* HEADER */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(10,10,15,0.9);
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .logo-text {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-text span { color: var(--accent); }
+
+    .badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(110,231,183,0.1);
+      color: var(--accent);
+      border: 1px solid rgba(110,231,183,0.2);
+      letter-spacing: 1px;
+    }
+
+    /* HERO */
+    .hero {
+      padding: 60px 0 40px;
+      text-align: center;
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -2px;
+      margin-bottom: 16px;
+    }
+
+    .hero h1 .grad {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 50%, var(--accent3) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      color: var(--text-muted);
+      font-size: 18px;
+      max-width: 600px;
+      margin: 0 auto;
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    /* MAIN LAYOUT */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 24px;
+      padding: 40px 0;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 1fr; }
+    }
+
+    /* UPLOAD PANEL */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .drop-zone {
+      margin: 24px;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(110,231,183,0.04);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .drop-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .drop-zone h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .drop-zone p {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Preview */
+    #preview-container {
+      margin: 0 24px 24px;
+      display: none;
+    }
+
+    #preview-img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      max-height: 300px;
+      object-fit: contain;
+      background: var(--surface2);
+    }
+
+    .preview-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+
+    .preview-name {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 200px;
+    }
+
+    .btn-clear {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--danger);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Buttons */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      width: 100%;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #34d399);
+      color: #0a0a0f;
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(110,231,183,0.3); }
+    .btn-primary:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+
+    #extract-btn {
+      margin: 0 24px 24px;
+      width: calc(100% - 48px);
+    }
+
+    /* Queue */
+    .queue-section { padding: 0 24px 24px; }
+
+    .queue-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+
+    .queue-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .queue-status {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-done { background: var(--success); }
+    .status-processing { background: var(--accent2); animation: pulse 1s infinite; }
+    .status-error { background: var(--danger); }
+    .status-pending { background: var(--text-muted); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .queue-name {
+      font-family: var(--mono);
+      font-size: 11px;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .queue-amount {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* RESULTS PANEL */
+    .results-panel { position: sticky; top: 90px; }
+
+    .empty-state {
+      padding: 80px 24px;
+      text-align: center;
+    }
+
+    .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+
+    .empty-state p {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    /* Invoice Display */
+    #invoice-display { display: none; }
+
+    .inv-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .inv-vendor { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+
+    .inv-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    .inv-total-box {
+      text-align: right;
+    }
+
+    .inv-total-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .inv-total-amount {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+
+    .inv-currency {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Confidence badge */
+    .conf-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .conf-high { background: rgba(74,222,128,0.1); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
+    .conf-medium { background: rgba(251,191,36,0.1); color: #fbbf24; border: 1px solid rgba(251,191,36,0.2); }
+    .conf-low { background: rgba(248,113,113,0.1); color: var(--danger); border: 1px solid rgba(248,113,113,0.2); }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+
+    .tab {
+      padding: 14px 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+    }
+
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-content { display: none; padding: 24px; }
+    .tab-content.active { display: block; }
+
+    /* Line Items Table */
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(42,42,58,0.5);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    .td-right { text-align: right; }
+    .td-num { color: var(--accent); font-weight: 700; }
+
+    /* Totals */
+    .totals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 16px;
+    }
+
+    .totals-table {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .total-row:last-child { border-bottom: none; }
+    .total-row.grand { font-size: 16px; font-weight: 700; color: var(--accent); padding-top: 12px; }
+
+    .total-label { color: var(--text-muted); }
+
+    /* Details grid */
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .detail-card {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .detail-card-title {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .detail-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 8px;
+    }
+
+    .detail-key {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .detail-val {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* JSON tab */
+    .json-viewer {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+      color: #a5f3fc;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    /* Export Bar */
+    .export-bar {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn-export {
+      flex: 1;
+      min-width: 100px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-export:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+    .btn-export.csv:hover { border-color: #4ade80; color: #4ade80; }
+    .btn-export.xlsx:hover { border-color: #34d399; color: #34d399; }
+    .btn-export.json-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* Loading */
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(10,10,15,0.8);
+      backdrop-filter: blur(4px);
+      border-radius: 16px;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 10;
+    }
+
+    .loading-overlay.active { display: flex; }
+
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 1000;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s;
+    }
+
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { background: var(--success); color: #0a0a0f; }
+    #toast.error { background: var(--danger); color: white; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -1px;
+    }
+
+    .stat-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent2); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">🧾</div>
+        <div class="logo-text">Invoice<span>AI</span></div>
+        <span class="badge">GROQ POWERED</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">
+        Extract · Analyze · Export
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="hero">
+    <h1>Turn Invoices Into<br><span class="grad">Structured Data</span></h1>
+    <p>Upload any invoice image. Our AI reads it, extracts all fields,<br>and exports clean accounting data in seconds.</p>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-val" id="stat-count">0</div>
+      <div class="stat-label">Invoices Processed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-total">$0</div>
+      <div class="stat-label">Total Value</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" id="stat-items">0</div>
+      <div class="stat-label">Line Items Found</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- LEFT: Upload Panel -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <span>📤</span>
+          <span class="panel-title">Upload Invoice</span>
+        </div>
+
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept="image/*" />
+          <span class="drop-icon">📄</span>
+          <h3>Drop invoice here</h3>
+          <p>or click to browse<br>JPG · PNG · WebP supported</p>
+        </div>
+
+        <div id="preview-container">
+          <img id="preview-img" alt="Invoice preview" />
+          <div class="preview-info">
+            <span class="preview-name" id="preview-name"></span>
+            <button class="btn-clear" onclick="clearFile()">✕ Clear</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="extract-btn" onclick="extractInvoice()" disabled>
+          <span>🤖</span> Extract with AI
+        </button>
+
+        <div class="queue-section" id="queue-section" style="display:none">
+          <div class="queue-title">PROCESSED INVOICES</div>
+          <div id="queue-list"></div>
+        </div>
+      </div>
+
+      <!-- Export All -->
+      <div class="panel" style="margin-top:16px" id="export-all-panel" style="display:none">
+        <div class="panel-header">
+          <span>📊</span>
+          <span class="panel-title">Export All Invoices</span>
+        </div>
+        <div class="export-bar">
+          <button class="btn-export csv" onclick="exportAll('csv')">📄 CSV</button>
+          <button class="btn-export xlsx" onclick="exportAll('xlsx')">📊 Excel</button>
+          <button class="btn-export json-btn" onclick="exportAll('json')">🔧 JSON</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Results Panel -->
+    <div class="panel results-panel" style="position:relative">
+      <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">AI is reading your invoice...</div>
+      </div>
+
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">🔍</div>
+        <p>Upload an invoice image and<br>click "Extract with AI" to begin.<br><br>
+        Supported: receipts, invoices,<br>purchase orders, bills.</p>
+      </div>
+
+      <div id="invoice-display">
+        <!-- Invoice Header -->
+        <div class="inv-header">
+          <div>
+            <div class="inv-vendor" id="res-vendor">—</div>
+            <div class="inv-meta" id="res-meta"></div>
+            <div id="res-confidence"></div>
+          </div>
+          <div class="inv-total-box">
+            <div class="inv-total-label">Total Amount</div>
+            <div class="inv-total-amount" id="res-total">—</div>
+            <div class="inv-currency" id="res-currency"></div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text-muted);margin-top:4px" id="res-inv-num"></div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('items', this)">LINE ITEMS</button>
+          <button class="tab" onclick="switchTab('details', this)">DETAILS</button>
+          <button class="tab" onclick="switchTab('json', this)">JSON</button>
+        </div>
+
+        <!-- Line Items Tab -->
+        <div class="tab-content active" id="tab-items">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th class="td-right">Qty</th>
+                  <th class="td-right">Unit Price</th>
+                  <th class="td-right">Tax %</th>
+                  <th class="td-right">Total</th>
+                </tr>
+              </thead>
+              <tbody id="items-tbody"></tbody>
+            </table>
+          </div>
+          <div class="totals-grid">
+            <div></div>
+            <div class="totals-table" id="totals-table"></div>
+          </div>
+        </div>
+
+        <!-- Details Tab -->
+        <div class="tab-content" id="tab-details">
+          <div class="details-grid" id="details-grid"></div>
+        </div>
+
+        <!-- JSON Tab -->
+        <div class="tab-content" id="tab-json">
+          <pre class="json-viewer" id="json-viewer"></pre>
+        </div>
+
+        <!-- Export this invoice -->
+        <div class="export-bar">
+          <button class="btn-export csv" onclick="exportCurrent('csv')">📄 Export CSV</button>
+          <button class="btn-export xlsx" onclick="exportCurrent('xlsx')">📊 Export Excel</button>
+          <button class="btn-export json-btn" onclick="exportCurrent('json')">🔧 Export JSON</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────
+  const API_BASE = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'
+    : '';  // Same origin on Render
+
+  // ── State ────────────────────────────────────────────────
+  let currentFile = null;
+  let currentInvoice = null;
+  let allInvoices = [];
+
+  // ── Drag & Drop ──────────────────────────────────────────
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  function handleFile(file) {
+    currentFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('preview-img').src = e.target.result;
+      document.getElementById('preview-name').textContent = file.name;
+      document.getElementById('preview-container').style.display = 'block';
+      document.getElementById('drop-zone').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+    document.getElementById('extract-btn').disabled = false;
+  }
+
+  function clearFile() {
+    currentFile = null;
+    fileInput.value = '';
+    document.getElementById('preview-container').style.display = 'none';
+    document.getElementById('drop-zone').style.display = 'block';
+    document.getElementById('extract-btn').disabled = true;
+  }
+
+  // ── Extract ──────────────────────────────────────────────
+  async function extractInvoice() {
+    if (!currentFile) return;
+
+    document.getElementById('loading').classList.add('active');
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('invoice-display').style.display = 'none';
+    document.getElementById('extract-btn').disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', currentFile);
+
+    const fileName = currentFile.name;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/extract`, { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) throw new Error(data.error || 'Extraction failed');
+
+      currentInvoice = data.data;
+      allInvoices.push({ ...data.data, _fileName: fileName });
+
+      renderInvoice(data.data);
+      addToQueue(fileName, data.data);
+      updateStats();
+      showExportAll();
+      showToast('Invoice extracted successfully!', 'success');
+
+    } catch (err) {
+      showToast(err.message, 'error');
+      document.getElementById('empty-state').style.display = 'block';
+    } finally {
+      document.getElementById('loading').classList.remove('active');
+      document.getElementById('extract-btn').disabled = false;
+    }
+  }
+
+  // ── Render Invoice ───────────────────────────────────────
+  function renderInvoice(inv) {
+    document.getElementById('invoice-display').style.display = 'block';
+
+    // Header
+    document.getElementById('res-vendor').textContent = inv.vendor?.name || 'Unknown Vendor';
+    document.getElementById('res-total').textContent = formatCurrency(inv.total_amount, inv.currency);
+    document.getElementById('res-currency').textContent = inv.currency || 'USD';
+    document.getElementById('res-inv-num').textContent = inv.invoice_number ? `INV# ${inv.invoice_number}` : '';
+
+    const metaParts = [];
+    if (inv.invoice_date) metaParts.push(`Date: ${inv.invoice_date}`);
+    if (inv.due_date) metaParts.push(`Due: ${inv.due_date}`);
+    if (inv.vendor?.email) metaParts.push(inv.vendor.email);
+    document.getElementById('res-meta').textContent = metaParts.join('  ·  ');
+
+    // Confidence
+    const conf = inv.confidence || 'medium';
+    document.getElementById('res-confidence').innerHTML =
+      `<span class="conf-badge conf-${conf}">◉ ${conf} confidence</span>`;
+
+    // Line Items
+    const tbody = document.getElementById('items-tbody');
+    tbody.innerHTML = '';
+    (inv.line_items || []).forEach(item => {
+      tbody.innerHTML += `
+        <tr>
+          <td>${escHtml(item.description || '—')}</td>
+          <td class="td-right">${item.quantity ?? '—'}</td>
+          <td class="td-right td-num">${formatCurrency(item.unit_price, inv.currency)}</td>
+          <td class="td-right">${item.tax_rate != null ? item.tax_rate + '%' : '—'}</td>
+          <td class="td-right td-num">${formatCurrency(item.total, inv.currency)}</td>
+        </tr>`;
+    });
+
+    // Totals
+    const totals = document.getElementById('totals-table');
+    totals.innerHTML = '';
+    const rows = [
+      ['Subtotal', inv.subtotal],
+      inv.tax_amount ? ['Tax', inv.tax_amount] : null,
+      inv.discount ? ['Discount', -inv.discount] : null,
+      ['Total', inv.total_amount],
+    ].filter(Boolean);
+
+    rows.forEach(([label, val], i) => {
+      const isGrand = i === rows.length - 1;
+      totals.innerHTML += `
+        <div class="total-row ${isGrand ? 'grand' : ''}">
+          <span class="total-label">${label}</span>
+          <span>${formatCurrency(val, inv.currency)}</span>
+        </div>`;
+    });
+
+    // Details
+    const detGrid = document.getElementById('details-grid');
+    detGrid.innerHTML = '';
+    const sections = [
+      { title: 'VENDOR', fields: inv.vendor || {} },
+      { title: 'BILL TO', fields: inv.bill_to || {} },
+      {
+        title: 'INVOICE INFO',
+        fields: {
+          'Invoice #': inv.invoice_number,
+          'Date': inv.invoice_date,
+          'Due Date': inv.due_date,
+          'Payment Terms': inv.payment_terms,
+          'Currency': inv.currency,
+        }
+      },
+      { title: 'NOTES', fields: { Notes: inv.notes } },
+    ];
+
+    sections.forEach(sec => {
+      const entries = Object.entries(sec.fields).filter(([, v]) => v != null && v !== '');
+      if (!entries.length) return;
+      let html = `<div class="detail-card"><div class="detail-card-title">${sec.title}</div>`;
+      entries.forEach(([k, v]) => {
+        html += `<div class="detail-field">
+          <span class="detail-key">${k}</span>
+          <span class="detail-val">${escHtml(String(v))}</span>
+        </div>`;
+      });
+      html += '</div>';
+      detGrid.innerHTML += html;
+    });
+
+    // JSON
+    document.getElementById('json-viewer').textContent = JSON.stringify(inv, null, 2);
+
+    // Switch to items tab
+    switchTab('items', document.querySelector('.tab.active') || document.querySelectorAll('.tab')[0]);
+  }
+
+  // ── Queue ─────────────────────────────────────────────────
+  function addToQueue(fileName, inv) {
+    document.getElementById('queue-section').style.display = 'block';
+    const list = document.getElementById('queue-list');
+    const item = document.createElement('div');
+    item.className = 'queue-item';
+    item.innerHTML = `
+      <div class="queue-status status-done"></div>
+      <span class="queue-name">${escHtml(fileName)}</span>
+      <span class="queue-amount">${formatCurrency(inv.total_amount, inv.currency)}</span>`;
+    item.onclick = () => { currentInvoice = inv; renderInvoice(inv); };
+    item.style.cursor = 'pointer';
+    list.prepend(item);
+  }
+
+  // ── Stats ─────────────────────────────────────────────────
+  function updateStats() {
+    document.getElementById('stat-count').textContent = allInvoices.length;
+    const total = allInvoices.reduce((s, i) => s + (i.total_amount || 0), 0);
+    document.getElementById('stat-total').textContent =
+      total >= 1000 ? '$' + (total / 1000).toFixed(1) + 'k' : '$' + total.toFixed(0);
+    const items = allInvoices.reduce((s, i) => s + (i.line_items?.length || 0), 0);
+    document.getElementById('stat-items').textContent = items;
+  }
+
+  function showExportAll() {
+    document.getElementById('export-all-panel').style.display = 'block';
+  }
+
+  // ── Export ────────────────────────────────────────────────
+  async function exportCurrent(format) {
+    if (!currentInvoice) return;
+    await doExport(format, [currentInvoice]);
+  }
+
+  async function exportAll(format) {
+    if (!allInvoices.length) return;
+    await doExport(format, allInvoices);
+  }
+
+  async function doExport(format, invoices) {
+    try {
+      const res = await fetch(`${API_BASE}/api/export/${format}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoices })
+      });
+
+      if (!res.ok) throw new Error('Export failed');
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoices_export.${format === 'xlsx' ? 'xlsx' : format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`Exported as ${format.toUpperCase()}!`, 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  // ── UI Helpers ────────────────────────────────────────────
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    document.getElementById(`tab-${name}`).classList.add('active');
+  }
+
+  function formatCurrency(val, currency = 'USD') {
+    if (val == null || isNaN(val)) return '—';
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency', currency: currency || 'USD'
+    }).format(val);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function showToast(msg, type) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = `show ${type}`;
+    setTimeout(() => toast.className = '', 3000);
+  }
+</script>
+</body>
+</html>
