@@ -3,6 +3,7 @@ import json
 import csv
 import io
 import base64
+import sys
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from groq import Groq
@@ -13,7 +14,20 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+# Validate env vars at startup so errors are obvious in logs
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    print("ERROR: GROQ_API_KEY environment variable is not set!", file=sys.stderr)
+    print("Set it in Render → your service → Environment → Add Environment Variable", file=sys.stderr)
+    # Don't exit — let the app start so /health works, but /api/extract will return a clear error
+
+def get_groq_client():
+    """Lazy Groq client — fails gracefully if key is missing."""
+    if not GROQ_API_KEY:
+        raise ValueError("GROQ_API_KEY is not configured. Add it in Render Environment Variables.")
+    return Groq(api_key=GROQ_API_KEY)
+
+print(f"Starting InvoiceAI backend... GROQ_API_KEY={'SET' if GROQ_API_KEY else 'MISSING'}")
 
 EXTRACTION_PROMPT = """You are an expert invoice data extractor. Analyze this invoice image and extract ALL data.
 
@@ -58,7 +72,11 @@ Be precise with numbers. Extract exact values shown. Use null for missing fields
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "message": "AI Invoice Reader API is running"})
+    return jsonify({
+        "status": "ok",
+        "message": "AI Invoice Reader API is running",
+        "groq_api_key_set": bool(GROQ_API_KEY),
+    })
 
 
 @app.route("/api/extract", methods=["POST"])
@@ -79,6 +97,7 @@ def extract_invoice():
         base64_image = base64.b64encode(file_content).decode("utf-8")
         media_type = file.content_type
 
+        client = get_groq_client()
         response = client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[
